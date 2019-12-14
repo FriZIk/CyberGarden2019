@@ -6,7 +6,9 @@ import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -35,6 +37,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -47,9 +50,13 @@ import java.util.List;
 import java.util.UUID;
 
 public class CameraActivity extends AppCompatActivity {
+    public Bitmap bitmap;
 
     private Button btnCapture;
     private TextureView textureView;
+
+    private final String filenameInternal = "couponsFile";
+    private final String filenameExternal = "cashbackFile";
 
     //Check state orientation of output image
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
@@ -144,7 +151,8 @@ public class CameraActivity extends AppCompatActivity {
             int rotation = getWindowManager().getDefaultDisplay().getRotation();
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION,ORIENTATIONS.get(rotation));
 
-            file = new File(Environment.getExternalStorageDirectory()+"/"+UUID.randomUUID().toString()+".jpg");
+//            file = new File(Environment.getExternalStorageDirectory()+"/"+UUID.randomUUID().toString()+".jpg");
+            file = new File(Environment.getDataDirectory()+"/"+UUID.randomUUID().toString()+".jpg"); // getExternalFilesDir()
             ImageReader.OnImageAvailableListener readerListener = new ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(ImageReader imageReader) {
@@ -154,18 +162,18 @@ public class CameraActivity extends AppCompatActivity {
                         ByteBuffer buffer = image.getPlanes()[0].getBuffer();
                         byte[] bytes = new byte[buffer.capacity()];
                         buffer.get(bytes);
-                        save(bytes);
 
-                    }
-                    catch (FileNotFoundException e)
-                    {
-                        e.printStackTrace();
-                    }
-                    catch (IOException e)
-                    {
-                        e.printStackTrace();
-                    }
-                    finally {
+//                        ByteArrayOutputStream bs = new ByteArrayOutputStream();
+//                        bs.write(bytes);
+//                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, bs);
+//                        byte[] byteArray = bs.toByteArray();
+                        Intent intent=new Intent(CameraActivity.this, SuccessActivity.class);
+//                        startActivityForResult(intent, 2);// Activity is started with requestCode 2
+//                        intent.putExtra("PICTURE", bytes);
+//                        save(bytes);
+                        Logic.image = bytes;
+                        startActivity(intent);
+                    } finally {
                         {
                             if(image != null)
                                 image.close();
@@ -344,5 +352,31 @@ public class CameraActivity extends AppCompatActivity {
         mBackgroundThread = new HandlerThread("Camera Background");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+    }
+
+    public void writeFileExternalStorage(String strdata) {
+        //String cashback = "Get 2% cashback on all purchases from xyz \n Get 10% cashback on travel from dhhs shop";
+        String state = Environment.getExternalStorageState();
+        //external storage availability check
+        if (!Environment.MEDIA_MOUNTED.equals(state)) {
+            return;
+        }
+        File file = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOCUMENTS), filenameExternal);
+
+
+        FileOutputStream outputStream = null;
+        try {
+            file.createNewFile();
+            //second argument of FileOutputStream constructor indicates whether to append or create new file if one exists
+            outputStream = new FileOutputStream(file, true);
+
+            outputStream.write(strdata.getBytes());
+            outputStream.flush();
+            outputStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 }
